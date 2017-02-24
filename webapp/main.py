@@ -3,6 +3,7 @@ import time
 import pprint
 from stepper import PiStepper
 from bmp280 import PiBMP280
+from pwm import PiPwm
 from flask import *
 app = Flask(__name__)
 
@@ -16,10 +17,14 @@ env_sensor = {'name' : 'bmp280', 'addr' : 0x76, 'chip' : PiBMP280(0x76) , 'data'
 ## function to read environmental parameters
 def get_env_sensors():
     # Read the Sensor ID for 0x76 -> values into the ['data'] dictionary
-    # ... add code ....
+    (chip_id, chip_version) = env_sensor['chip'].readBMP280ID()
+    env_sensor['data']['chip_id'] = chip_id
+    env_sensor['data']['chip_version'] = chip_version
 
     # Read the Sensor Temp/Pressure values into the ['data'] dictionary
-    # ... add code ....
+    (temperature, pressure) = env_sensor['chip'].readBMP280All()
+    env_sensor['data']['temperature'] = { 'reading': temperature, 'units' : 'C' }
+    env_sensor['data']['pressure'] = { 'reading': pressure, 'units' : 'hPa' }
     return env_sensor['data']
 
 @app.route("/")
@@ -43,7 +48,12 @@ def sensors():
 # -----------------------------------------------------------------------------
 @app.route("/motor/<int:motor_state>", methods=['GET'])
 def motor(motor_state):
-    # ... add code ....
+    if motor_state == 0:    #stop
+        pi_smc.stop()
+    elif motor_state == 1:  #start
+        pi_smc.start()
+    else:
+        return ('Unknown Stepper State.', 400)
     return ('', 204)
 
 
@@ -53,7 +63,7 @@ def motor(motor_state):
 # -----------------------------------------------------------------------------
 @app.route("/motor_speed/<int:motor_speed>", methods=['GET'])
 def set_motor_speed(motor_speed):
-    # ... add code ....
+    pi_smc.setSpeed(motor_speed)
     return "Set Motor Speed : " + str(pi_smc.getSpeed()) + "\n"
 
 # ===================== GET: /motor_direction/<direction> =====================
@@ -62,7 +72,7 @@ def set_motor_speed(motor_speed):
 # -----------------------------------------------------------------------------
 @app.route("/motor_zero", methods=['GET'])
 def set_motor_zero():
-    # ... add code ....
+    pi_smc.setPosition(0)
     return "Set Motor Position : " + str(pi_smc.getPosition()) + "\n"
 
 # ===================== GET: /motor_direction/<direction> =====================
@@ -71,7 +81,7 @@ def set_motor_zero():
 # -----------------------------------------------------------------------------
 @app.route("/motor_direction/<string:direction>", methods=['GET'])
 def set_motor_dir(direction):
-    # ... add code ....
+    pi_smc.setDirection(direction)
     return "Set Motor Direction : " + str(pi_smc.getDirection()) + "\n"
 
 # ===================== GET: /motor_steps/<steps> =====================
@@ -80,7 +90,7 @@ def set_motor_dir(direction):
 # -----------------------------------------------------------------------------
 @app.route("/motor_steps/<int:steps>", methods=['GET'])
 def set_motor_steps(steps):
-    # ... add code ....
+    pi_smc.setSteps(steps)
     return "Set Motor Steps : " + str(pi_smc.getSteps()) + "\n"
 
 # ====================== GET: /motor_position/<position> ======================
@@ -89,7 +99,7 @@ def set_motor_steps(steps):
 # -----------------------------------------------------------------------------
 @app.route("/motor_position/<int:position>", methods=['GET'])
 def set_motor_pos(position):
-    # ... add code ....
+    pi_smc.setPosition(position)
     return "Set Motor Direction : " + str(pi_smc.getDirection()) + "\n"
 
 
@@ -99,8 +109,19 @@ def set_motor_pos(position):
 # -----------------------------------------------------------------------------
 @app.route("/motor_multistep", methods=['POST'])
 def postMotorMultistep():
-    # ... add code ....
+    ctrl_data = request.data
+    print "Motor Control Data:" + ctrl_data
+    direction = str(request.form['direction'])
+    if (direction == 'CW'):
+        pi_smc.setDirection(1)
+    elif (direction == 'CCW'):      #start
+        pi_smc.setDirection(0)
+    else:
+        return ('Unknown Stepper Direction', 400)
 
+    steps = str(request.form['steps'])
+    pi_smc.step(int(steps))
+                
     return "Motor Multisteps Steps:" + steps + " Direction:"+ direction + "\n"
 
 # curl --data 'mykey=FOOBAR' http://0.0.0.0:5000/createHello

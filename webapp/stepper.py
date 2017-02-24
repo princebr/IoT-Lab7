@@ -47,40 +47,76 @@ class PiStepper(object):
         print "Hello Stepper"
 
     def start(self):
-        # add code
+        print "Starting Stepper Motor"
+        GPIO.output(LED,1)  #turn on LED
+        GPIO.output(STBY,1) #TB6612 Stanby State = TRUE
+        self.state = 1
 
     def stop(self):
-        # add code
+        print "Stopping Stepper Motor"
+        GPIO.output(LED,0)  #turn off LED
+        GPIO.output(STBY,0) #TB6612 Standby State = FALSE
+        self.state = 0
 
     def getState(self):
-        # add code
+        return self.state
 
     # get motor position
     def getPosition(self):
-        # add code
+        return self.position
 
     # set motor position
     def setPosition(self,position):
-        # add code
+        self.position = position
 
     # set the speed parameters for stepper motor based on RPM
     def setSpeed(self, rpm):
-        # add code
+        self.sec_per_step = 60.0 / (self.steps_per_rev * rmp)
+        self.steppingcounter = 0
+        self.speed = rpm
 
     def getSpeed(self):
-        # add code
+        return self.speed
 
     # perform one step in sequence at a direction CW or CCW
     def oneStep(self, direction):
-        # add code
+        # go to next step and wrap
+        self.direction = direction
+        coils = [0, 0, 0, 0]
+        step2coils = [
+        #    A2 B1 A1 B2
+            [1, 0, 0, 0],
+            [1, 1, 0, 0],
+            [0, 1, 0, 0],
+            [0, 1, 1, 0],
+            [0, 0, 1, 0],
+            [0, 0, 1, 1],
+            [0, 0, 0, 1],
+            [1, 0, 0, 1] ]
+        coils = step2coils[self.currentstep]
 
+        # post increment/decrement modulo step counter
+        #  --> update stepper position (1 tic / step)
+        if(direction == 1):
+            self.currentstep += 1
+            self.position += 1
+        else:
+            self.currentstep -= 1
+            self.position -= 1
+        self.currentstep %= 8
+
+        self.setPin(AIN2, coils[0])
+        self.setPin(BIN1, coils[1])
+        self.setPin(AIN1, coils[2])
+        self.setPin(BIN2, coils[3])
+        
     # set current pin in sequence
     def setPin(self, pin, value):
-        # add code
+        GPIO.output(pin, value)
 
     # set motor direction
     def setDirection(self,direction):
-        # add code
+        self.direction = direction
 
     # get motor direction
     def getDirection(self):
@@ -88,16 +124,24 @@ class PiStepper(object):
 
     # set motor steps
     def setSteps(self,steps):
-        # add code
+        self.steps = steps
 
     # get motor direction
     def getSteps(self):
-        # add code
+        return self.steps
 
     # execute all steps
     def step(self, steps):
-        # add code
+        s_per_s self.sec_per_step
+
+        for s in range(steps):
+            self.oneStep(self.direction)
+            time.sleep(s_poer_s)
 
     # de-energize all coils
     def nullCoils(self):
-        # add code
+        coils = [0, 0, 0, 0]
+        self.setPin(AIN2, coils[0])
+        self.setPin(BIN1, coils[1])
+        self.setPin(AIN1, coils[2])
+        self.setPin(BIN2, coils[3])
